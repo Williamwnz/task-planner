@@ -993,12 +993,12 @@ input, textarea, select {
       <div class="modal-body">
         <div class="settings-field">
           <label class="settings-label" for="settings-morning">上午提醒时间</label>
-          <input type="time" class="settings-input" id="settings-morning" value="09:00">
+          <input type="time" class="settings-input" id="settings-morning" value="08:30">
           <div class="settings-hint">每日上午检查待办事项的时间</div>
         </div>
         <div class="settings-field">
           <label class="settings-label" for="settings-evening">下午提醒时间</label>
-          <input type="time" class="settings-input" id="settings-evening" value="17:00">
+          <input type="time" class="settings-input" id="settings-evening" value="18:00">
           <div class="settings-hint">每日下午检查待办事项的时间</div>
         </div>
       </div>
@@ -1414,30 +1414,40 @@ input, textarea, select {
 
   // === Task Actions ===
   async function completeTask(taskId) {
-    await taskStore.updateTask(taskId, {
-      status: 'done',
-      completedAt: new Date().toISOString(),
-    });
-    showToast('已完成');
-    await renderAllZones();
+    try {
+      await taskStore.updateTask(taskId, {
+        status: 'done',
+        completedAt: new Date().toISOString(),
+      });
+      showToast('已完成');
+      await renderAllZones();
+    } catch (err) {
+      console.error(err);
+      showToast('操作失败，请重试');
+    }
   }
 
   async function postponeTask(taskId) {
-    const newDeadline = prompt('推迟到哪天？（如：2026-07-25）');
-    if (!newDeadline) return;
-    const tasks = await taskStore.getAllTasks();
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
-    await taskStore.updateTask(taskId, {
-      status: 'postponed',
-      deadline: newDeadline,
-    });
-    setTimeout(async () => {
-      await taskStore.updateTask(taskId, { status: 'in_progress' });
+    try {
+      const newDeadline = prompt('推迟到哪天？（如：2026-07-25）');
+      if (!newDeadline) return;
+      const d = new Date(newDeadline);
+      if (isNaN(d.getTime())) {
+        showToast('日期格式无效，请输入如 2026-07-25 的格式');
+        return;
+      }
+      const tasks = await taskStore.getAllTasks();
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+      await taskStore.updateTask(taskId, {
+        deadline: d.toISOString().split('T')[0],
+      });
+      showToast('已推迟到 ' + d.toISOString().split('T')[0]);
       await renderAllZones();
-    }, 100);
-    showToast('已推迟到 ' + newDeadline);
-    await renderAllZones();
+    } catch (err) {
+      console.error(err);
+      showToast('操作失败，请重试');
+    }
   }
 
   // === App Initialization ===
@@ -1476,12 +1486,14 @@ input, textarea, select {
     });
     if (recentTasks.length > 0 && Notification.permission === 'granted') {
       if ('serviceWorker' in navigator) {
-        const reg = await navigator.serviceWorker.ready;
-        reg.showNotification('工作助手', {
-          body: `有 ${inboxTasks.length} 条任务还没填详情，要补吗？`,
-          icon: '/task-planner/icon-192.png',
-          tag: 'inbox-reminder',
-        });
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          reg.showNotification('工作助手', {
+            body: `有 ${inboxTasks.length} 条任务还没填详情，要补吗？`,
+            icon: '/task-planner/icon.svg',
+            tag: 'inbox-reminder',
+          });
+        } catch {}
       }
     }
   }
@@ -1544,13 +1556,15 @@ input, textarea, select {
         : '今天没有待办任务 ';
 
       if ('serviceWorker' in navigator) {
-        const reg = await navigator.serviceWorker.ready;
-        reg.showNotification('☀ 今日待办', {
-          body,
-          icon: '/task-planner/icon-192.png',
-          tag: 'morning-checkin',
-          requireInteraction: true,
-        });
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          reg.showNotification('☀ 今日待办', {
+            body,
+            icon: '/task-planner/icon.svg',
+            tag: 'morning-checkin',
+            requireInteraction: true,
+          });
+        } catch {}
       }
     } else if (type === 'evening') {
       const doneToday = tasks.filter(t => {
@@ -1563,13 +1577,15 @@ input, textarea, select {
         : '今天还没有完成任务，加油！';
 
       if ('serviceWorker' in navigator) {
-        const reg = await navigator.serviceWorker.ready;
-        reg.showNotification('🌙 今日回顾', {
-          body: body + (activeTasks.length > 0 ? `| 还有 ${activeTasks.length} 项待完成` : ''),
-          icon: '/task-planner/icon-192.png',
-          tag: 'evening-checkin',
-          requireInteraction: true,
-        });
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          reg.showNotification('🌙 今日回顾', {
+            body: body + (activeTasks.length > 0 ? `| 还有 ${activeTasks.length} 项待完成` : ''),
+            icon: '/task-planner/icon.svg',
+            tag: 'evening-checkin',
+            requireInteraction: true,
+          });
+        } catch {}
       }
     }
   }
