@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#c62828">
   <meta name="description" content="党建办工作事项管理">
-  <title>工作助手</title>
+  <title>工作计划助手</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23c62828' width='100' height='100' rx='20'/><text x='50' y='68' text-anchor='middle' fill='white' font-size='52' font-family='sans-serif'>📋</text></svg>">
 <style>
@@ -826,7 +826,7 @@ input, textarea, select {
        App Header
        ============================================================ -->
   <header class="app-header">
-    <h1 class="app-title">&#x1F4CB; 工作助手</h1>
+    <h1 class="app-title">&#x1F4CB; 工作计划助手</h1>
     <div class="header-actions">
       <button class="header-btn" id="btn-export" title="导出" aria-label="导出数据">&#x1F4E4;</button>
       <button class="header-btn" id="btn-import" title="导入" aria-label="导入数据">&#x1F4E5;</button>
@@ -1502,7 +1502,7 @@ input, textarea, select {
       if ('serviceWorker' in navigator) {
         try {
           const reg = await navigator.serviceWorker.ready;
-          reg.showNotification('工作助手', {
+          reg.showNotification('工作计划助手', {
             body: `有 ${inboxTasks.length} 条任务还没填详情，要补吗？`,
             icon: './icon.svg',
             tag: 'inbox-reminder',
