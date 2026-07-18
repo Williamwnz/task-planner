@@ -1018,6 +1018,28 @@ input, textarea, select {
      Application Script
      ============================================================ -->
 <script>
+  // === Service Worker Registration ===
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/task-planner/sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.warn('SW registration failed:', err));
+  }
+
+  // === Notification Permission ===
+  async function requestNotificationPermission() {
+    if (!('Notification' in window)) return false;
+    if (Notification.permission === 'granted') return true;
+    if (Notification.permission === 'denied') return false;
+    const result = await Notification.requestPermission();
+    return result === 'granted';
+  }
+
+  // Request on first user interaction
+  document.addEventListener('click', async function firstInteraction() {
+    document.removeEventListener('click', firstInteraction);
+    await requestNotificationPermission();
+  }, { once: true });
+
   // === IndexedDB Data Layer ===
   const DB_NAME = 'taskPlannerDB';
   const DB_VERSION = 1;
@@ -1468,6 +1490,120 @@ input, textarea, select {
 
   // Also run every 10 minutes
   setInterval(checkInboxReminders, 10 * 60 * 1000);
+
+  // === Check-in Timer ===
+  let checkinInterval = null;
+
+  function getSettings() {
+    try {
+      return JSON.parse(localStorage.getItem('taskPlannerSettings') || '{}');
+    } catch { return {}; }
+  }
+
+  function scheduleCheckins() {
+    if (checkinInterval) clearInterval(checkinInterval);
+
+    const settings = getSettings();
+    const morningTime = settings.morningTime || '08:30';
+    const eveningTime = settings.eveningTime || '18:00';
+
+    checkinInterval = setInterval(() => {
+      const now = new Date();
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      if (currentTime === morningTime) {
+        sendCheckinNotification('morning');
+      } else if (currentTime === eveningTime) {
+        sendCheckinNotification('evening');
+      }
+    }, 60000);
+
+    console.log('Check-ins scheduled:', morningTime, 'and', eveningTime);
+  }
+
+  async function sendCheckinNotification(type) {
+    if (!('Notification' in window)) {
+      if (type === 'morning') {
+        const tasks = await taskStore.getAllTasks();
+        const active = tasks.filter(t => t.status !== 'done').length;
+        showToast(`☀ 今日待办：${active} 项任务`, 5000);
+      } else if (type === 'evening') {
+        showToast('🌙 今日回顾：打开看看今天完成了什么', 5000);
+      }
+      return;
+    }
+    if (Notification.permission !== 'granted') return;
+
+    const tasks = await taskStore.getAllTasks();
+    const activeTasks = tasks.filter(t => t.status !== 'done');
+
+    if (type === 'morning') {
+      const body = activeTasks.length > 0
+        ? `今日有 ${activeTasks.length} 项待办任务`
+        : '今天没有待办任务 ';
+
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.ready;
+        reg.showNotification('☀ 今日待办', {
+          body,
+          icon: '/task-planner/icon-192.png',
+          tag: 'morning-checkin',
+          requireInteraction: true,
+        });
+      }
+    } else if (type === 'evening') {
+      const doneToday = tasks.filter(t => {
+        if (t.status !== 'done' || !t.completedAt) return false;
+        return new Date(t.completedAt).toDateString() === new Date().toDateString();
+      });
+
+      const body = doneToday.length > 0
+        ? `今天完成了 ${doneToday.length} 项任务 `
+        : '今天还没有完成任务，加油！';
+
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.ready;
+        reg.showNotification('🌙 今日回顾', {
+          body: body + (activeTasks.length > 0 ? `| 还有 ${activeTasks.length} 项待完成` : ''),
+          icon: '/task-planner/icon-192.png',
+          tag: 'evening-checkin',
+          requireInteraction: true,
+        });
+      }
+    }
+  }
+
+  // Settings Modal
+  document.getElementById('btn-settings').addEventListener('click', () => {
+    const settings = getSettings();
+    document.getElementById('settings-morning').value = settings.morningTime || '08:30';
+    document.getElementById('settings-evening').value = settings.eveningTime || '18:00';
+    document.getElementById('settings-modal').classList.add('active');
+  });
+
+  document.getElementById('settings-close').addEventListener('click', () => {
+    document.getElementById('settings-modal').classList.remove('active');
+  });
+
+  document.getElementById('settings-save').addEventListener('click', () => {
+    const settings = {
+      morningTime: document.getElementById('settings-morning').value,
+      eveningTime: document.getElementById('settings-evening').value,
+    };
+    localStorage.setItem('taskPlannerSettings', JSON.stringify(settings));
+    document.getElementById('settings-modal').classList.remove('active');
+    showToast('设置已保存 ');
+    scheduleCheckins();
+  });
+
+  document.getElementById('settings-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('settings-modal')) {
+      document.getElementById('settings-modal').classList.remove('active');
+    }
+  });
+
+  // Start check-in scheduler
+  scheduleCheckins();
 </script>
 
 </body>
