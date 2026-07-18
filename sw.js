@@ -1,4 +1,4 @@
-const CACHE_NAME = 'task-planner-v2';
+const CACHE_NAME = 'task-planner-v3';
 const ASSETS = [
   './',
   './index.html',
