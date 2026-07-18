@@ -160,7 +160,6 @@ input, textarea, select {
    Empty State
    ============================================================ */
 .empty-state {
-  display: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -749,6 +748,75 @@ input, textarea, select {
     box-shadow: var(--shadow-md);
   }
 }
+
+	/* ============================================================
+	   Small Buttons (used in task cards)
+	   ============================================================ */
+	.btn-sm {
+	  padding: 6px 12px;
+	  border-radius: var(--radius-sm);
+	  font-size: 0.78rem;
+	  font-weight: 500;
+	  min-height: 32px;
+	  transition: background 0.15s, opacity 0.15s;
+	  display: inline-flex;
+	  align-items: center;
+	  gap: 3px;
+	}
+
+	.btn-sm:active {
+	  opacity: 0.8;
+	}
+
+	.btn-done {
+	  background: var(--success);
+	  color: #fff;
+	}
+
+	.btn-done:active {
+	  background: #2e7d32;
+	}
+
+	.btn-postpone {
+	  background: var(--warning);
+	  color: #fff;
+	}
+
+	.btn-postpone:active {
+	  background: #e65100;
+	}
+
+	/* ============================================================
+	   Task Card Inner Layout
+	   ============================================================ */
+	.task-title {
+	  font-size: 0.95rem;
+	  font-weight: 500;
+	  color: var(--text-primary);
+	  line-height: 1.4;
+	  word-break: break-word;
+	}
+
+	.task-meta {
+	  display: flex;
+	  flex-wrap: wrap;
+	  gap: 6px 12px;
+	  font-size: 0.75rem;
+	  color: var(--text-secondary);
+	}
+
+	.task-meta span {
+	  display: inline-flex;
+	  align-items: center;
+	  gap: 2px;
+	}
+
+	.task-actions {
+	  display: flex;
+	  gap: 6px;
+	  margin-top: 4px;
+	  flex-wrap: wrap;
+	}
 </style>
 </head>
 <body>
@@ -1057,6 +1125,150 @@ input, textarea, select {
       });
     },
   };
+
+  // === Urgency Logic ===
+  function getTaskUrgency(task) {
+    if (task.status === 'done') return 'normal';
+
+    // Inbox tasks older than 24h are urgent
+    if (task.status === 'inbox') {
+      const age = Date.now() - new Date(task.createdAt).getTime();
+      if (age > 24 * 60 * 60 * 1000) return 'danger';
+      if (age > 1 * 60 * 60 * 1000) return 'warning';
+      return 'normal';
+    }
+
+    // Tasks with deadline
+    if (task.deadline) {
+      const now = Date.now();
+      const deadline = new Date(task.deadline).getTime();
+      const remaining = deadline - now;
+
+      if (remaining < 0) return 'danger'; // overdue
+
+      if (task.isLongTerm && task.estimatedDays > 0) {
+        const totalDuration = task.estimatedDays * 24 * 60 * 60 * 1000;
+        const elapsed = now - new Date(task.createdAt).getTime();
+        const remainingRatio = remaining / totalDuration;
+        if (remainingRatio < 0.3 || remaining < totalDuration * 0.3) return 'danger';
+        const expectedElapsed = (elapsed / totalDuration);
+        if (expectedElapsed > 0.7 && remainingRatio > 0.3) return 'warning';
+      }
+
+      if (task.estimatedDays > 0) {
+        const estimatedMs = task.estimatedDays * 24 * 60 * 60 * 1000;
+        if (remaining < estimatedMs) return 'warning';
+      }
+    }
+
+    return 'normal';
+  }
+
+  // === Formatting Helpers ===
+  function formatDeadline(deadlineStr) {
+    if (!deadlineStr) return '';
+    const d = new Date(deadlineStr);
+    const now = new Date();
+    const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+    const month = d.getMonth() + 1;
+    const day = d.getDate();
+    if (diffDays < 0) return `已超期${Math.abs(diffDays)}天`;
+    if (diffDays === 0) return '今天截止';
+    if (diffDays === 1) return '明天截止';
+    if (diffDays <= 3) return `${month}/${day}（剩${diffDays}天）`;
+    return `${month}/${day}截止`;
+  }
+
+  function formatTimeAgo(dateStr) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return '刚刚';
+    if (mins < 60) return `${mins}分钟前`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}小时前`;
+    const days = Math.floor(hours / 24);
+    return `${days}天前`;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // === Task Card Rendering ===
+  function renderTaskCard(task) {
+    const urgency = getTaskUrgency(task);
+    const cssClass = urgency === 'danger' ? 'danger' : urgency === 'warning' ? 'warning' : '';
+
+    const metaItems = [];
+    if (task.deliverTo) metaItems.push(`📌 ${escapeHtml(task.deliverTo)}`);
+    if (task.deadline) metaItems.push(`⏰ ${formatDeadline(task.deadline)}`);
+    if (task.estimatedDays) metaItems.push(`📏 预计${task.estimatedDays}天`);
+    if (task.isLongTerm && task.estimatedDays) {
+      const elapsed = Date.now() - new Date(task.createdAt).getTime();
+      const remainingDays = Math.max(0, task.estimatedDays - Math.ceil(elapsed / (1000 * 60 * 60 * 24)));
+      metaItems.push(`⏳ 剩${remainingDays}天`);
+    }
+    metaItems.push(`🕐 ${formatTimeAgo(task.createdAt)}`);
+
+    return `
+      <div class="task-card ${cssClass}" data-task-id="${task.id}">
+        <div class="task-title">${escapeHtml(task.title)}</div>
+        ${metaItems.length ? `<div class="task-meta">${metaItems.map(m => `<span>${m}</span>`).join('')}</div>` : ''}
+        <div class="task-actions">
+          ${task.status === 'inbox' ? `<button class="btn-sm btn-primary" onclick="openTaskDetail('${task.id}')">补全信息</button>` : ''}
+          ${task.status !== 'done' ? `<button class="btn-sm btn-done" onclick="completeTask('${task.id}')">✅ 完成</button>` : ''}
+          ${task.status === 'in_progress' || task.status === 'todo' ? `<button class="btn-sm btn-postpone" onclick="postponeTask('${task.id}')">⏭ 推迟</button>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  // === Zone Rendering ===
+  async function renderAllZones() {
+    const tasks = await taskStore.getAllTasks();
+
+    const inbox = [];
+    const urgent = [];
+    const progress = [];
+    const done = [];
+
+    for (const task of tasks) {
+      if (task.status === 'done') { done.push(task); continue; }
+      if (task.status === 'inbox') { inbox.push(task); continue; }
+      const urgency = getTaskUrgency(task);
+      if (urgency === 'danger') { urgent.push(task); }
+      else { progress.push(task); }
+    }
+
+    const sortFn = (a, b) => {
+      if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline);
+      if (a.deadline) return -1;
+      if (b.deadline) return 1;
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    };
+    inbox.sort(sortFn);
+    urgent.sort(sortFn);
+    progress.sort(sortFn);
+    done.sort((a, b) => new Date(b.completedAt || b.createdAt) - new Date(a.completedAt || a.createdAt));
+
+    document.getElementById('tasks-inbox').innerHTML = inbox.map(renderTaskCard).join('') || '<div class="empty-state" style="padding:16px"><p>暂无待补全任务</p></div>';
+    document.getElementById('tasks-urgent').innerHTML = urgent.map(renderTaskCard).join('') || '<div class="empty-state" style="padding:16px"><p>暂无紧急任务 ✅</p></div>';
+    document.getElementById('tasks-progress').innerHTML = progress.map(renderTaskCard).join('') || '<div class="empty-state" style="padding:16px"><p>暂无进行中任务</p></div>';
+    document.getElementById('tasks-done').innerHTML = done.map(renderTaskCard).join('') || '<div class="empty-state" style="padding:16px"><p>还没有完成的任务</p></div>';
+
+    document.getElementById('count-inbox').textContent = inbox.length;
+    document.getElementById('count-urgent').textContent = urgent.length;
+    document.getElementById('count-progress').textContent = progress.length;
+    document.getElementById('count-done').textContent = done.length;
+
+    document.getElementById('zone-inbox').style.display = inbox.length === 0 ? 'none' : '';
+    document.getElementById('zone-urgent').style.display = urgent.length === 0 ? 'none' : '';
+
+    const totalActive = inbox.length + urgent.length + progress.length;
+    document.getElementById('empty-state').style.display = totalActive === 0 && done.length === 0 ? '' : 'none';
+  }
 </script>
 
 </body>
