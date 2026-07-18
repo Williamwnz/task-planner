@@ -950,7 +950,113 @@ input, textarea, select {
      Application Script
      ============================================================ -->
 <script>
-  console.log('Task Planner shell loaded');
+  // === IndexedDB Data Layer ===
+  const DB_NAME = 'taskPlannerDB';
+  const DB_VERSION = 1;
+  const STORE_NAME = 'tasks';
+
+  let dbPromise;
+
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          store.createIndex('status', 'status', { unique: false });
+          store.createIndex('createdAt', 'createdAt', { unique: false });
+          store.createIndex('deadline', 'deadline', { unique: false });
+        }
+      };
+      request.onsuccess = (e) => resolve(e.target.result);
+      request.onerror = (e) => reject(e.target.error);
+    });
+  }
+
+  dbPromise = openDB();
+
+  const taskStore = {
+    async addTask(task) {
+      const db = await dbPromise;
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const newTask = {
+        ...task,
+        id: task.id || 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        createdAt: task.createdAt || new Date().toISOString(),
+        completedAt: task.completedAt || null,
+        status: task.status || 'inbox',
+        deliverTo: task.deliverTo || '',
+        deadline: task.deadline || null,
+        estimatedDays: task.estimatedDays || 0,
+        isLongTerm: task.isLongTerm || false,
+        notes: task.notes || '',
+      };
+      await new Promise((resolve, reject) => {
+        const req = store.add(newTask);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+      await tx.complete;
+      return newTask.id;
+    },
+
+    async updateTask(id, changes) {
+      const db = await dbPromise;
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const existing = await new Promise((resolve, reject) => {
+        const req = store.get(id);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      if (!existing) throw new Error('Task not found: ' + id);
+      const updated = { ...existing, ...changes, id };
+      await new Promise((resolve, reject) => {
+        const req = store.put(updated);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+      await tx.complete;
+      return updated;
+    },
+
+    async deleteTask(id) {
+      const db = await dbPromise;
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      await new Promise((resolve, reject) => {
+        const req = store.delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+      await tx.complete;
+    },
+
+    async getAllTasks() {
+      const db = await dbPromise;
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      return new Promise((resolve, reject) => {
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    },
+
+    async getTasksByStatus(status) {
+      const db = await dbPromise;
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const index = store.index('status');
+      return new Promise((resolve, reject) => {
+        const req = index.getAll(status);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    },
+  };
 </script>
 
 </body>
