@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#c62828">
+  <meta name="description" content="党建办工作事项管理">
+  <title>工作助手</title>
+  <link rel="manifest" href="manifest.json">
+<style>
+/* ============================================================
+   CSS Variables & Reset
+   ============================================================ */
+:root {
+  --primary: #c62828;
+  --primary-light: #ef5350;
+  --danger: #d32f2f;
+  --danger-bg: #fff5f5;
+  --warning: #f57c00;
+  --warning-bg: #fff8f0;
+  --success: #388e3c;
+  --success-bg: #f0faf0;
+  --info: #1976d2;
+  --bg: #f5f5f5;
+  --card-bg: #ffffff;
+  --text-primary: #212121;
+  --text-secondary: #757575;
+  --text-hint: #9e9e9e;
+  --border: #e0e0e0;
+  --divider: #eeeeee;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.12);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.16);
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+  --safe-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--bg);
+  color: var(--text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-size: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  border: none;
+  outline: none;
+  background: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* ============================================================
+   App Container
+   ============================================================ */
+#app {
+  max-width: 600px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: var(--bg);
+}
+
+/* ============================================================
+   Header
+   ============================================================ */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--primary);
+  color: #ffffff;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(198,40,40,0.3);
+  min-height: 52px;
+}
+
+.app-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.header-actions {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.header-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 1.2rem;
+  transition: background 0.2s;
+  min-height: 36px;
+}
+
+.header-btn:active {
+  background: rgba(255,255,255,0.2);
+}
+
+/* ============================================================
+   Main Content Area
+   ============================================================ */
+.main-content {
+  flex: 1;
+  padding: 12px 12px 100px 12px;
+  overflow-y: auto;
+}
+
+/* ============================================================
+   Empty State
+   ============================================================ */
+.empty-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-hint);
+}
+
+.empty-state.active {
+  display: flex;
+}
+
+.empty-state-icon {
+  font-size: 3.5rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-state-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.empty-state-hint {
+  font-size: 0.85rem;
+  margin-top: 4px;
+  color: var(--text-hint);
+}
+
+/* ============================================================
+   Task Zones (Sections)
+   ============================================================ */
+.zone {
+  margin-bottom: 12px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.zone-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+
+.zone-header:active {
+  background: var(--divider);
+}
+
+.zone-icon {
+  font-size: 1.2rem;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.zone-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  flex: 1;
+}
+
+/* Zone header color accents */
+.zone[data-zone="inbox"] .zone-title { color: var(--danger); }
+.zone[data-zone="urgent"] .zone-title { color: var(--warning); }
+.zone[data-zone="progress"] .zone-title { color: var(--info); }
+.zone[data-zone="done"] .zone-title { color: var(--success); }
+
+.zone-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.zone[data-zone="inbox"] .zone-count { background: var(--danger); }
+.zone[data-zone="urgent"] .zone-count { background: var(--warning); }
+.zone[data-zone="progress"] .zone-count { background: var(--info); }
+.zone[data-zone="done"] .zone-count { background: var(--success); }
+
+.zone-toggle {
+  font-size: 0.75rem;
+  color: var(--text-hint);
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.zone.collapsed .zone-toggle {
+  transform: rotate(-90deg);
+}
+
+.zone.collapsed .zone-tasks {
+  display: none;
+}
+
+.zone-tasks {
+  border-top: 1px solid var(--divider);
+  padding: 8px 12px;
+  min-height: 8px;
+}
+
+.zone-tasks:empty::after {
+  content: '暂无任务';
+  display: block;
+  padding: 16px 8px;
+  text-align: center;
+  color: var(--text-hint);
+  font-size: 0.85rem;
+}
+
+/* ============================================================
+   Task Cards
+   ============================================================ */
+.task-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 12px 14px;
+  margin: 6px 0;
+  border-left: 4px solid transparent;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.15s;
+  position: relative;
+  min-height: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.task-card:active {
+  transform: scale(0.985);
+  box-shadow: var(--shadow-md);
+}
+
+/* Task importance styles */
+.task-card.warning {
+  border-left-color: var(--warning);
+}
+
+.task-card.danger {
+  border-left-color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.task-card-title {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.task-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.task-card-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.task-card-meta .due-overdue {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.task-card-meta .due-today {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.task-card-meta .due-upcoming {
+  color: var(--info);
+}
+
+/* Long-term badge */
+.task-card .badge-longterm {
+  display: inline-block;
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--info);
+  color: #ffffff;
+  font-weight: 500;
+  align-self: flex-start;
+}
+
+/* ============================================================
+   FAB (Floating Action Button)
+   ============================================================ */
+.fab {
+  position: fixed;
+  bottom: calc(24px + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 1.75rem;
+  font-weight: 300;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(198,40,40,0.45);
+  z-index: 90;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fab:active {
+  background: #a51d1d;
+  box-shadow: 0 2px 8px rgba(198,40,40,0.35);
+  transform: translateX(-50%) scale(0.93);
+}
+
+/* ============================================================
+   Modal System (Bottom Sheet)
+   ============================================================ */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+}
+
+.modal.active {
+  display: block;
+}
+
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  animation: fadeIn 0.25s ease;
+}
+
+.modal-sheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--card-bg);
+  border-radius: 16px 16px 0 0;
+  max-height: 85vh;
+  max-height: 85dvh;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+  padding-bottom: var(--safe-bottom);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--divider);
+  flex-shrink: 0;
+}
+
+.modal-header-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.modal-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  min-height: 36px;
+  transition: background 0.15s;
+}
+
+.modal-close:active {
+  background: var(--divider);
+}
+
+.modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--divider);
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Quick-Add Modal Specific
+   ============================================================ */
+.quick-add-input {
+  width: 100%;
+  padding: 12px 0;
+  font-size: 1rem;
+  border-bottom: 2px solid var(--divider);
+  transition: border-color 0.2s;
+  min-height: 44px;
+}
+
+.quick-add-input:focus {
+  border-bottom-color: var(--primary);
+}
+
+.quick-add-input::placeholder {
+  color: var(--text-hint);
+}
+
+/* ============================================================
+   Task Detail Modal Specific
+   ============================================================ */
+.detail-field {
+  margin-bottom: 14px;
+}
+
+.detail-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.detail-input {
+  width: 100%;
+  padding: 10px 0;
+  font-size: 0.95rem;
+  border-bottom: 1px solid var(--divider);
+  transition: border-color 0.2s;
+  min-height: 40px;
+}
+
+.detail-input:focus {
+  border-bottom-color: var(--primary);
+}
+
+.detail-input::placeholder {
+  color: var(--text-hint);
+}
+
+.detail-textarea {
+  width: 100%;
+  padding: 10px 0;
+  font-size: 0.95rem;
+  border-bottom: 1px solid var(--divider);
+  resize: none;
+  min-height: 60px;
+  transition: border-color 0.2s;
+}
+
+.detail-textarea:focus {
+  border-bottom-color: var(--primary);
+}
+
+.detail-textarea::placeholder {
+  color: var(--text-hint);
+}
+
+/* Checkbox row */
+.detail-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  min-height: 40px;
+}
+
+.detail-check-row input[type="checkbox"] {
+  -webkit-appearance: checkbox;
+  -moz-appearance: checkbox;
+  appearance: checkbox;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.detail-check-row label {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ============================================================
+   Settings Modal Specific
+   ============================================================ */
+.settings-field {
+  margin-bottom: 16px;
+}
+
+.settings-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.settings-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  transition: border-color 0.2s;
+  min-height: 40px;
+}
+
+.settings-input:focus {
+  border-color: var(--primary);
+  background: var(--card-bg);
+}
+
+.settings-hint {
+  font-size: 0.75rem;
+  color: var(--text-hint);
+  margin-top: 4px;
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  min-height: 42px;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+.btn:active {
+  opacity: 0.85;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.btn-primary:active {
+  background: #a51d1d;
+}
+
+.btn-secondary {
+  background: var(--divider);
+  color: var(--text-primary);
+}
+
+.btn-secondary:active {
+  background: var(--border);
+}
+
+.btn-danger {
+  background: none;
+  color: var(--danger);
+  font-weight: 500;
+  flex: 0 0 auto;
+  padding: 10px 8px;
+}
+
+.btn-danger:active {
+  background: var(--danger-bg);
+}
+
+/* ============================================================
+   Toast
+   ============================================================ */
+.toast {
+  position: fixed;
+  bottom: calc(90px + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #323232;
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 300;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ============================================================
+   Animations
+   ============================================================ */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* ============================================================
+   Responsive: Desktop (min-width 768px)
+   ============================================================ */
+@media (min-width: 768px) {
+  #app {
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    box-shadow: 0 0 30px rgba(0,0,0,0.06);
+  }
+
+  .main-content {
+    padding: 16px 20px 110px 20px;
+  }
+
+  .app-header {
+    padding: 14px 20px;
+  }
+
+  .modal-sheet {
+    max-width: 600px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 16px 16px 0 0;
+  }
+
+  .modal.active .modal-sheet {
+    animation: slideUpDesktop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slideUpDesktop {
+    from { transform: translateX(-50%) translateY(100%); }
+    to { transform: translateX(-50%) translateY(0); }
+  }
+
+  .task-card {
+    padding: 14px 16px;
+  }
+
+  .task-card:hover {
+    box-shadow: var(--shadow-md);
+  }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ============================================================
+       App Header
+       ============================================================ -->
+  <header class="app-header">
+    <h1 class="app-title">&#x1F4CB; 工作助手</h1>
+    <div class="header-actions">
+      <button class="header-btn" id="btn-export" title="导出" aria-label="导出数据">&#x1F4E4;</button>
+      <button class="header-btn" id="btn-import" title="导入" aria-label="导入数据">&#x1F4E5;</button>
+      <button class="header-btn" id="btn-settings" title="设置" aria-label="设置">&#x2699;&#xFE0F;</button>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       Main Content
+       ============================================================ -->
+  <main class="main-content" id="main-content">
+
+    <!-- Empty State -->
+    <div class="empty-state active" id="empty-state">
+      <div class="empty-state-icon">&#x1F4ED;</div>
+      <div class="empty-state-text">还没有任务</div>
+      <div class="empty-state-hint">点击下方的 + 按钮添加第一个任务</div>
+    </div>
+
+    <!-- Zone: 待补全 (Inbox) -->
+    <section class="zone" id="zone-inbox" data-zone="inbox">
+      <div class="zone-header" data-zone-toggle="inbox">
+        <span class="zone-icon">&#x1F4E5;</span>
+        <span class="zone-title">待补全</span>
+        <span class="zone-count" id="count-inbox">0</span>
+        <span class="zone-toggle">&#x25BC;</span>
+      </div>
+      <div class="zone-tasks" id="tasks-inbox"></div>
+    </section>
+
+    <!-- Zone: 紧急 (Urgent) -->
+    <section class="zone" id="zone-urgent" data-zone="urgent">
+      <div class="zone-header" data-zone-toggle="urgent">
+        <span class="zone-icon">&#x1F534;</span>
+        <span class="zone-title">紧急</span>
+        <span class="zone-count" id="count-urgent">0</span>
+        <span class="zone-toggle">&#x25BC;</span>
+      </div>
+      <div class="zone-tasks" id="tasks-urgent"></div>
+    </section>
+
+    <!-- Zone: 进行中 (In Progress) -->
+    <section class="zone" id="zone-progress" data-zone="progress">
+      <div class="zone-header" data-zone-toggle="progress">
+        <span class="zone-icon">&#x1F3C3;</span>
+        <span class="zone-title">进行中</span>
+        <span class="zone-count" id="count-progress">0</span>
+        <span class="zone-toggle">&#x25BC;</span>
+      </div>
+      <div class="zone-tasks" id="tasks-progress"></div>
+    </section>
+
+    <!-- Zone: 已完成 (Done) -->
+    <section class="zone" id="zone-done" data-zone="done">
+      <div class="zone-header" data-zone-toggle="done">
+        <span class="zone-icon">&#x2705;</span>
+        <span class="zone-title">已完成</span>
+        <span class="zone-count" id="count-done">0</span>
+        <span class="zone-toggle">&#x25BC;</span>
+      </div>
+      <div class="zone-tasks" id="tasks-done"></div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       FAB (Floating Action Button)
+       ============================================================ -->
+  <button class="fab" id="fab" title="添加任务" aria-label="添加新任务">+</button>
+
+  <!-- ============================================================
+       Quick-Add Modal
+       ============================================================ -->
+  <div class="modal" id="quick-add-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <span class="modal-header-title">快速添加任务</span>
+        <button class="modal-close" id="quick-add-close" aria-label="关闭">&#x2715;</button>
+      </div>
+      <div class="modal-body">
+        <input
+          type="text"
+          class="quick-add-input"
+          id="quick-add-title"
+          placeholder="输入任务标题..."
+          autocomplete="off"
+        >
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="quick-add-cancel">取消</button>
+        <button class="btn btn-primary" id="quick-add-confirm">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       Task Detail Modal
+       ============================================================ -->
+  <div class="modal" id="task-detail-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <span class="modal-header-title" id="detail-modal-title">任务详情</span>
+        <button class="modal-close" id="task-detail-close" aria-label="关闭">&#x2715;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Title -->
+        <div class="detail-field">
+          <label class="detail-label" for="detail-title">标题</label>
+          <input type="text" class="detail-input" id="detail-title" placeholder="任务标题">
+        </div>
+
+        <!-- Deliver To -->
+        <div class="detail-field">
+          <label class="detail-label" for="detail-deliver-to">交给谁</label>
+          <select class="detail-input" id="detail-deliver-to" style="border-bottom: 1px solid var(--divider);">
+            <option value="">-- 请选择 --</option>
+          </select>
+        </div>
+
+        <!-- Deadline -->
+        <div class="detail-field">
+          <label class="detail-label" for="detail-deadline">截止日期</label>
+          <input type="date" class="detail-input" id="detail-deadline">
+        </div>
+
+        <!-- Estimated Days -->
+        <div class="detail-field">
+          <label class="detail-label" for="detail-estimate">预估天数</label>
+          <input type="number" class="detail-input" id="detail-estimate" placeholder="输入天数" min="1">
+        </div>
+
+        <!-- Long Term -->
+        <div class="detail-check-row">
+          <input type="checkbox" id="detail-long-term">
+          <label for="detail-long-term">长期任务（不显示截止日期提醒）</label>
+        </div>
+
+        <!-- Notes -->
+        <div class="detail-field">
+          <label class="detail-label" for="detail-notes">备注</label>
+          <textarea class="detail-textarea" id="detail-notes" placeholder="添加备注..." rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="task-detail-delete">删除</button>
+        <button class="btn btn-secondary" id="task-detail-cancel">取消</button>
+        <button class="btn btn-primary" id="task-detail-save">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       Settings Modal
+       ============================================================ -->
+  <div class="modal" id="settings-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <span class="modal-header-title">设置</span>
+        <button class="modal-close" id="settings-close" aria-label="关闭">&#x2715;</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-field">
+          <label class="settings-label" for="settings-morning">上午提醒时间</label>
+          <input type="time" class="settings-input" id="settings-morning" value="09:00">
+          <div class="settings-hint">每日上午检查待办事项的时间</div>
+        </div>
+        <div class="settings-field">
+          <label class="settings-label" for="settings-evening">下午提醒时间</label>
+          <input type="time" class="settings-input" id="settings-evening" value="17:00">
+          <div class="settings-hint">每日下午检查待办事项的时间</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="settings-save" style="flex: 1;">保存设置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       Toast
+       ============================================================ -->
+  <div class="toast" id="toast"></div>
+
+</div>
+
+<!-- ============================================================
+     Application Script
+     ============================================================ -->
+<script>
+  console.log('Task Planner shell loaded');
+</script>
+
+</body>
+</html>
