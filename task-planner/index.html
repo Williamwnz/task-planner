@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#c62828">
   <meta name="description" content="党建办工作事项管理">
   <title>工作助手</title>
-  <link rel="manifest" href="/task-planner/manifest.json">
+  <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23c62828' width='100' height='100' rx='20'/><text x='50' y='68' text-anchor='middle' fill='white' font-size='52' font-family='sans-serif'>📋</text></svg>">
 <style>
 /* ============================================================
@@ -1019,7 +1019,7 @@ input, textarea, select {
 <script>
   // === Service Worker Registration ===
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/task-planner/sw.js')
+    navigator.serviceWorker.register('./sw.js')
       .then(reg => console.log('SW registered:', reg.scope))
       .catch(err => console.warn('SW registration failed:', err));
   }
@@ -1488,7 +1488,7 @@ input, textarea, select {
           const reg = await navigator.serviceWorker.ready;
           reg.showNotification('工作助手', {
             body: `有 ${inboxTasks.length} 条任务还没填详情，要补吗？`,
-            icon: '/task-planner/icon.svg',
+            icon: './icon.svg',
             tag: 'inbox-reminder',
           });
         } catch {}
@@ -1558,7 +1558,7 @@ input, textarea, select {
           const reg = await navigator.serviceWorker.ready;
           reg.showNotification('☀ 今日待办', {
             body,
-            icon: '/task-planner/icon.svg',
+            icon: './icon.svg',
             tag: 'morning-checkin',
             requireInteraction: true,
           });
@@ -1579,7 +1579,7 @@ input, textarea, select {
           const reg = await navigator.serviceWorker.ready;
           reg.showNotification('🌙 今日回顾', {
             body: body + (activeTasks.length > 0 ? `| 还有 ${activeTasks.length} 项待完成` : ''),
-            icon: '/task-planner/icon.svg',
+            icon: './icon.svg',
             tag: 'evening-checkin',
             requireInteraction: true,
           });
