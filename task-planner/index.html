@@ -880,7 +880,7 @@ input, textarea, select {
     </section>
 
     <!-- Zone: 已完成 (Done) -->
-    <section class="zone" id="zone-done" data-zone="done">
+    <section class="zone collapsed" id="zone-done" data-zone="done">
       <div class="zone-header" data-zone-toggle="done">
         <span class="zone-icon">&#x2705;</span>
         <span class="zone-title">已完成</span>
@@ -1597,10 +1597,8 @@ input, textarea, select {
     scheduleCheckins();
   });
 
-  document.getElementById('settings-modal').addEventListener('click', (e) => {
-    if (e.target === document.getElementById('settings-modal')) {
-      document.getElementById('settings-modal').classList.remove('active');
-    }
+  document.querySelector('#settings-modal .modal-overlay').addEventListener('click', () => {
+    document.getElementById('settings-modal').classList.remove('active');
   });
 
   // Start check-in scheduler
@@ -1663,6 +1661,16 @@ input, textarea, select {
       }
     });
     input.click();
+  });
+
+  // === Zone Toggle (collapsible done zone) ===
+  document.querySelectorAll('.zone-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const zone = header.parentElement;
+      if (zone.id === 'zone-done') {
+        zone.classList.toggle('collapsed');
+      }
+    });
   });
 </script>
 
