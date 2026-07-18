@@ -1,9 +1,9 @@
 const CACHE_NAME = 'task-planner-v1';
 const ASSETS = [
-  '/task-planner/',
-  '/task-planner/index.html',
-  '/task-planner/manifest.json',
-  '/task-planner/icon.svg',
+  './',
+  './index.html',
+  './manifest.json',
+  './icon.svg',
 ];
 
 self.addEventListener('install', (event) => {
@@ -35,12 +35,12 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.matchAll({ type: 'window' }).then(clientList => {
       for (const client of clientList) {
-        if (client.url.includes('/task-planner/') && 'focus' in client) {
+        if ('focus' in client) {
           return client.focus();
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow('/task-planner/');
+        return clients.openWindow('./');
       }
     })
   );
