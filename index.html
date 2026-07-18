@@ -1430,6 +1430,44 @@ input, textarea, select {
     await renderAllZones();
     console.log('Task Planner initialized');
   })();
+
+  // === Inbox Reminder Logic ===
+  async function checkInboxReminders() {
+    if (!('Notification' in window)) return;
+
+    const inboxTasks = await taskStore.getTasksByStatus('inbox');
+    if (inboxTasks.length === 0) return;
+
+    const now = Date.now();
+
+    // Check for tasks > 24h without details
+    const oldTasks = inboxTasks.filter(t => now - new Date(t.createdAt).getTime() > 24 * 60 * 60 * 1000);
+    if (oldTasks.length > 0) {
+      showToast(`⚠️ ${oldTasks.length}条任务超过24小时未补全，请尽快处理`);
+    }
+
+    // Schedule 1-hour reminder for newly added inbox tasks
+    const recentTasks = inboxTasks.filter(t => {
+      const age = now - new Date(t.createdAt).getTime();
+      return age > 55 * 60 * 1000 && age < 65 * 60 * 1000; // ~1 hour ago
+    });
+    if (recentTasks.length > 0 && Notification.permission === 'granted') {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.ready;
+        reg.showNotification('工作助手', {
+          body: `有 ${inboxTasks.length} 条任务还没填详情，要补吗？`,
+          icon: '/task-planner/icon-192.png',
+          tag: 'inbox-reminder',
+        });
+      }
+    }
+  }
+
+  // Run on page load after a short delay
+  setTimeout(checkInboxReminders, 2000);
+
+  // Also run every 10 minutes
+  setInterval(checkInboxReminders, 10 * 60 * 1000);
 </script>
 
 </body>
