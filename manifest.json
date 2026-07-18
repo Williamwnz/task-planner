@@ -1,6 +1,6 @@
 {
-  "name": "工作助手",
-  "short_name": "工作助手",
+  "name": "工作计划助手",
+  "short_name": "工作计划助手",
   "description": "工作任务计划管理",
   "start_url": "./",
   "display": "standalone",
