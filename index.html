@@ -1269,6 +1269,167 @@ input, textarea, select {
     const totalActive = inbox.length + urgent.length + progress.length;
     document.getElementById('empty-state').style.display = totalActive === 0 && done.length === 0 ? '' : 'none';
   }
+
+  // === Toast ===
+  function showToast(msg, duration = 2000) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._timeout);
+    el._timeout = setTimeout(() => { el.classList.remove('show'); }, duration);
+  }
+
+  // === Quick Add Modal ===
+  // HTML IDs: quick-add-modal, quick-add-title, fab, quick-add-cancel, quick-add-confirm, quick-add-close
+  const modalAdd = document.getElementById('quick-add-modal');
+  const addTitle = document.getElementById('quick-add-title');
+
+  document.getElementById('fab').addEventListener('click', () => {
+    modalAdd.classList.add('active');
+    addTitle.value = '';
+    setTimeout(() => addTitle.focus(), 100);
+  });
+
+  document.getElementById('quick-add-close').addEventListener('click', () => {
+    modalAdd.classList.remove('active');
+  });
+
+  document.getElementById('quick-add-cancel').addEventListener('click', () => {
+    modalAdd.classList.remove('active');
+  });
+
+  document.getElementById('quick-add-confirm').addEventListener('click', async () => {
+    const title = addTitle.value.trim();
+    if (!title) { showToast('请输入任务内容'); return; }
+    await taskStore.addTask({ title, status: 'inbox' });
+    modalAdd.classList.remove('active');
+    showToast('已记录');
+    await renderAllZones();
+  });
+
+  // Close quick-add modal by clicking overlay
+  modalAdd.querySelector('.modal-overlay').addEventListener('click', () => {
+    modalAdd.classList.remove('active');
+  });
+
+  addTitle.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('quick-add-confirm').click();
+    if (e.key === 'Escape') document.getElementById('quick-add-cancel').click();
+  });
+
+  // === Task Detail Modal ===
+  // HTML IDs: task-detail-modal, detail-modal-title, detail-title, detail-deliver-to,
+  //           detail-deadline, detail-estimate, detail-long-term, detail-notes,
+  //           task-detail-delete, task-detail-cancel, task-detail-save, task-detail-close
+  const modalDetail = document.getElementById('task-detail-modal');
+  const detailId = { current: null };
+
+  function openTaskDetail(taskId) {
+    detailId.current = taskId;
+    taskStore.getAllTasks().then(tasks => {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+      document.getElementById('detail-modal-title').textContent = task.status === 'inbox' ? '补全任务信息' : '编辑任务';
+      document.getElementById('detail-title').value = task.title || '';
+      document.getElementById('detail-deliver-to').value = task.deliverTo || '';
+      document.getElementById('detail-deadline').value = task.deadline || '';
+      document.getElementById('detail-estimate').value = task.estimatedDays || '';
+      document.getElementById('detail-long-term').checked = task.isLongTerm || false;
+      document.getElementById('detail-notes').value = task.notes || '';
+      document.getElementById('task-detail-delete').style.display = '';
+      modalDetail.classList.add('active');
+    });
+  }
+
+  document.getElementById('task-detail-close').addEventListener('click', () => {
+    modalDetail.classList.remove('active');
+    detailId.current = null;
+  });
+
+  document.getElementById('task-detail-cancel').addEventListener('click', () => {
+    modalDetail.classList.remove('active');
+    detailId.current = null;
+  });
+
+  document.getElementById('task-detail-save').addEventListener('click', async () => {
+    if (!detailId.current) return;
+    const changes = {
+      title: document.getElementById('detail-title').value.trim(),
+      deliverTo: document.getElementById('detail-deliver-to').value.trim(),
+      deadline: document.getElementById('detail-deadline').value || null,
+      estimatedDays: parseFloat(document.getElementById('detail-estimate').value) || 0,
+      isLongTerm: document.getElementById('detail-long-term').checked,
+      notes: document.getElementById('detail-notes').value.trim(),
+    };
+    const tasks = await taskStore.getAllTasks();
+    const task = tasks.find(t => t.id === detailId.current);
+    if (task && task.status === 'inbox' && changes.deliverTo) {
+      changes.status = 'in_progress';
+    }
+    await taskStore.updateTask(detailId.current, changes);
+    modalDetail.classList.remove('active');
+    detailId.current = null;
+    showToast('已保存');
+    await renderAllZones();
+  });
+
+  document.getElementById('task-detail-delete').addEventListener('click', async () => {
+    if (!detailId.current) return;
+    if (!confirm('确定删除这条任务吗？')) return;
+    await taskStore.deleteTask(detailId.current);
+    modalDetail.classList.remove('active');
+    detailId.current = null;
+    showToast('已删除');
+    await renderAllZones();
+  });
+
+  // Close detail modal by clicking overlay
+  modalDetail.querySelector('.modal-overlay').addEventListener('click', () => {
+    modalDetail.classList.remove('active');
+    detailId.current = null;
+  });
+
+  // === Task Actions ===
+  async function completeTask(taskId) {
+    await taskStore.updateTask(taskId, {
+      status: 'done',
+      completedAt: new Date().toISOString(),
+    });
+    showToast('已完成');
+    await renderAllZones();
+  }
+
+  async function postponeTask(taskId) {
+    const newDeadline = prompt('推迟到哪天？（如：2026-07-25）');
+    if (!newDeadline) return;
+    const tasks = await taskStore.getAllTasks();
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    await taskStore.updateTask(taskId, {
+      status: 'postponed',
+      deadline: newDeadline,
+    });
+    setTimeout(async () => {
+      await taskStore.updateTask(taskId, { status: 'in_progress' });
+      await renderAllZones();
+    }, 100);
+    showToast('已推迟到 ' + newDeadline);
+    await renderAllZones();
+  }
+
+  // === App Initialization ===
+  (async function init() {
+    try {
+      await dbPromise;
+      console.log('Database ready');
+    } catch (err) {
+      console.error('Database init failed:', err);
+      showToast('数据库初始化失败，请刷新重试');
+      return;
+    }
+    await renderAllZones();
+    console.log('Task Planner initialized');
+  })();
 </script>
 
 </body>
