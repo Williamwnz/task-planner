@@ -3,6 +3,7 @@ const ASSETS = [
   '/task-planner/',
   '/task-planner/index.html',
   '/task-planner/manifest.json',
+  '/task-planner/icon.svg',
 ];
 
 self.addEventListener('install', (event) => {
