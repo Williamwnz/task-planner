@@ -1239,8 +1239,10 @@ input, textarea, select {
         ${metaItems.length ? `<div class="task-meta">${metaItems.map(m => `<span>${m}</span>`).join('')}</div>` : ''}
         <div class="task-actions">
           ${task.status === 'inbox' ? `<button class="btn-sm btn-primary" onclick="openTaskDetail('${task.id}')">补全信息</button>` : ''}
+          ${task.status === 'in_progress' ? `<button class="btn-sm btn-primary" onclick="openTaskDetail('${task.id}')">编辑</button>` : ''}
           ${task.status !== 'done' ? `<button class="btn-sm btn-done" onclick="completeTask('${task.id}')">✅ 完成</button>` : ''}
           ${task.status === 'in_progress' || task.status === 'todo' ? `<button class="btn-sm btn-postpone" onclick="postponeTask('${task.id}')">⏭ 推迟</button>` : ''}
+          ${task.status === 'done' ? `<button class="btn-sm btn-postpone" onclick="undoTask('${task.id}')">↩ 撤销</button>` : ''}
         </div>
       </div>
     `;
@@ -1418,6 +1420,20 @@ input, textarea, select {
         completedAt: new Date().toISOString(),
       });
       showToast('已完成');
+      await renderAllZones();
+    } catch (err) {
+      console.error(err);
+      showToast('操作失败，请重试');
+    }
+  }
+
+  async function undoTask(taskId) {
+    try {
+      await taskStore.updateTask(taskId, {
+        status: 'in_progress',
+        completedAt: null,
+      });
+      showToast('已撤销，回到进行中');
       await renderAllZones();
     } catch (err) {
       console.error(err);
